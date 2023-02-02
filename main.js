@@ -22,7 +22,7 @@ async function setStake(client, address, amountInit) {
     });
 }
 
-const getBalanceAndStake = async (amount) => {
+async function getBalanceAndStake(amount) {
     const provider = new PolkadotProvider();
     await provider.init();
     const list = await provider.getAccounts();
@@ -36,44 +36,36 @@ const getBalanceAndStake = async (amount) => {
     const client = new Sdk(options);
 
     // весь застейченный баланс отображается в lockedBalance
-    const initBalanceResponse = await client.balance.get({
-        address: signer.instance.address,
-    });
-    console.log(initBalanceResponse);
+    let initBalanceResponse;
+    try {
+        initBalanceResponse = await client.balance.get({
+            address: signer.instance.address,
+        });
+    } catch (e) {}
 
     // set stake
-    const result = await setStake(client, signer.instance.address, amount);
-    console.log(result);
+    let setStakeResult;
 
-    if (result.error) throw new Error(result.error);
+    try {
+        setStakeResult = await setStake(client, signer.instance.address, amount);
+    } catch (e) {}
 
-    const val = await client.stateQuery.execute({
-            endpoint: 'rpc',
-            module: 'appPromotion',
-            method: 'totalStaked',
-        },
-        {args: [{ Substrate: signer.instance.address }]}
-    );
-    console.log(val);
-};
-const main = async () => {
-
-    const form = document.querySelector('form');
-    form.addEventListener('submit', async (event) => {
-        event.preventDefault();
-        const amount =
-            document.querySelector('#amount') &&
-            document.querySelector('#amount').value;
-        document.querySelector('#response').innerText = 'wait...';
-        try {
-            await getBalanceAndStake(amount);
-            document.querySelector('#response').innerText =
-                'Output:\nstaked';
-        } catch (e) {
-            console.log(JSON.stringify(e))
-            document.querySelector('#response').innerText = 'Error';
-        }
-    });
+    let totalStaked;
+    try {
+        totalStaked = await client.stateQuery.execute({
+                endpoint: 'rpc',
+                module: 'appPromotion',
+                method: 'totalStaked',
+            },
+            {args: [{Substrate: signer.instance.address}]}
+        );
+    } catch (e) {}
+    return {
+        initBalanceResponse,
+        setStakeResult,
+        totalStaked
+    }
 };
 
-main();
+window.setStake = setStake;
+window.getBalanceAndStake = getBalanceAndStake;
